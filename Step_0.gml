@@ -1,4 +1,4 @@
-// ---------- read buttons and keys ----------
+
 var act    = btn_click;      // set by the Draw event when a button was clicked
 btn_click  = "";
 var typing = (quiz && phase == "predict");     // the player is typing their answer
@@ -10,7 +10,6 @@ var k_pause = (!typing && keyboard_check_pressed(vk_space));
 var k_round = keyboard_check_pressed(vk_enter) || (act == "round");
 var k_mode  = keyboard_check_pressed(vk_tab)   || (act == "mode");
 
-// ---------- switch between quiz and sandbox ----------
 if (k_mode) {
     quiz = !quiz;
     if (quiz) {
@@ -21,7 +20,7 @@ if (k_mode) {
     }
 }
 
-// ---------- QUIZ MODE ----------
+
 if (quiz) {
     if (phase == "predict") {
         // keep the typed text short
@@ -73,7 +72,7 @@ if (quiz) {
     }
 }
 
-// ---------- SANDBOX MODE ----------
+
 if (!quiz) {
     var mcx = (mouse_x - ox) div cell;
     var mcy = mouse_y div cell;
@@ -119,7 +118,7 @@ if (!quiz) {
     }
 }
 
-// ---------- pause, autoplay, back, speed (both modes) ----------
+
 if (k_pause) paused = !paused;
 if (k_auto)  manual = !manual;
 
@@ -131,7 +130,6 @@ if (k_back && (mode == "running" || mode == "done") && !(quiz && phase == "resul
 if (keyboard_check_pressed(vk_up))   spd = min(spd + 1, 7);
 if (keyboard_check_pressed(vk_down)) spd = max(spd - 1, 0);
 
-// ---------- run the search ----------
 if (mode == "running") {
     if (manual) {
         // step-by-step: nothing happens until the player presses N or the button
