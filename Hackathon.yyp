@@ -19,16 +19,13 @@
   },
   "name":"Hackathon",
   "resources":[
-    {"id":{"name":"obj_maze","path":"objects/obj_maze/obj_maze.yy",},},
-    {"id":{"name":"rm_game","path":"rooms/rm_game/rm_game.yy",},},
-    {"id":{"name":"Script1","path":"scripts/Script1/Script1.yy",},},
-    {"id":{"name":"Script2","path":"scripts/Script2/Script2.yy",},},
-    {"id":{"name":"Script3","path":"scripts/Script3/Script3.yy",},},
+    {"id":{"name":"obj_controller","path":"objects/obj_controller/obj_controller.yy",},},
+    {"id":{"name":"Room1","path":"rooms/Room1/Room1.yy",},},
   ],
   "resourceType":"GMProject",
   "resourceVersion":"2.0",
   "RoomOrderNodes":[
-    {"roomId":{"name":"rm_game","path":"rooms/rm_game/rm_game.yy",},},
+    {"roomId":{"name":"Room1","path":"rooms/Room1/Room1.yy",},},
   ],
   "templateType":"game",
   "TextureGroups":[
