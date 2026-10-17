@@ -26,7 +26,7 @@ goal_cell  = 7 * cols + 17;
 dir_x = [0, 1, 0, -1];
 dir_y = [-1, 0, 1, 0];
 
-// ---------- search state ----------
+
 frontier    = ds_list_create();   // the SAME list is used as a queue (BFS) or a stack (DFS)
 algo        = "none";             // "bfs", "dfs" or "none"
 mode        = "idle";             // "idle", "running" or "done"
@@ -52,7 +52,6 @@ speed_steps = [1, 1, 1, 1, 1, 1, 1, 4];          // steps per tick
 bfs_visited = -1;  bfs_len = -1;
 dfs_visited = -1;  dfs_len = -1;
 
-// ---------- quiz state ----------
 quiz        = true;
 phase       = "predict";   // predict, run_bfs, run_dfs, result (or sandbox)
 guess       = "";
@@ -64,7 +63,6 @@ rounds      = 0;
 streak      = 0;
 input_msg   = "";
 
-// ---------- methods ----------
 reset_search = function() {
     ds_list_clear(frontier);
     for (var n = 0; n < total; n++) {
@@ -225,7 +223,7 @@ search_step = function() {
     // tidy the end of the neighbour text: "...; " becomes "..."
     if (string_length(checks) > 2) checks = string_copy(checks, 1, string_length(checks) - 2) + ".";
 
-    // ---------- detailed commentary ----------
+
     var qs = ds_list_size(frontier);
     var nxt_txt = "";
     if (qs > 0) {
@@ -305,7 +303,6 @@ txt_block = function(tx, ty, s) {
     draw_text_ext_transformed(tx, ty, s, -1, (room_width - 2 * tx) / ui, ui, ui, 0);
 }
 
-// ---------- on-screen buttons ----------
 btn_begin = function(startx, starty) {
     btn_x = startx;
     btn_y = starty;
