@@ -7,7 +7,6 @@ var col_wall  = make_colour_rgb(95, 100, 118);
 var inset = max(1, floor(cell / 32));   // gap between cells
 var csc   = cell / 32;                  // scale for the S and G letters
 
-// ---------- cells ----------
 for (var yy = 0; yy < rows; yy++) {
     for (var xx = 0; xx < cols; xx++) {
         var i  = yy * cols + xx;
@@ -25,7 +24,6 @@ for (var yy = 0; yy < rows; yy++) {
     }
 }
 
-// ---------- frontier cells ----------
 var sz  = ds_list_size(frontier);
 var fin = cell * 0.19;
 draw_set_colour(make_colour_rgb(255, 160, 40));
@@ -36,7 +34,7 @@ for (var k = 0; k < sz; k++) {
     draw_rectangle(fx + fin, fy + fin, fx + cell - fin, fy + cell - fin, false);
 }
 
-// ---------- final path ----------
+
 if (mode == "done" && found) {
     draw_set_colour(c_yellow);
     for (var k = 0; k < array_length(route); k++) {
@@ -51,7 +49,7 @@ if (mode == "done" && found) {
     }
 }
 
-// ---------- current cell ----------
+
 if (mode == "running" && current != -1) {
     var cxp = ox + (current mod cols) * cell;
     var cyp = (current div cols) * cell;
@@ -60,7 +58,7 @@ if (mode == "running" && current != -1) {
     draw_rectangle(cxp + inset + 1, cyp + inset + 1, cxp + cell - inset - 1, cyp + cell - inset - 1, true);
 }
 
-// ---------- start and goal ----------
+
 var sx = ox + (start_cell mod cols) * cell;
 var sy = (start_cell div cols) * cell;
 var gx = ox + (goal_cell mod cols) * cell;
@@ -79,7 +77,7 @@ draw_text_transformed(gx + cell / 2, gy + cell / 2, "G", csc, csc, 0);
 draw_set_halign(fa_left);
 draw_set_valign(fa_top);
 
-// ---------- panel layout (all scaled by ui, so nothing overlaps) ----------
+
 var lh       = 22 * ui;                 // line height
 var mx       = 10 * ui;                 // left margin
 var pt       = grid_h + 10 * ui;        // top of the panel
@@ -91,7 +89,7 @@ var stat_y   = lab_y + lh + 6 * ui;
 var last_y   = stat_y + lh;
 var ctl_y    = last_y + lh + 8 * ui;    // buttons
 
-// ---------- title and hint ----------
+
 var title = "";
 var hint  = "";
 var tcol  = c_white;
@@ -147,7 +145,7 @@ txt(mx, pt, title);
 draw_set_colour(hcol);
 txt_block(mx, pt + lh, hint);
 
-// ---------- the frontier as a visible list ----------
+
 var maxbox = max(1, floor((room_width - 2 * mx) / box_step));
 var shown  = min(sz, maxbox);
 var bw     = box_step - 4 * ui;
@@ -177,7 +175,6 @@ draw_set_colour(next_end ? c_white : c_gray);
 txt(room_width - mx, lab_y, next_end ? "NEXT ->  end (newest)" : "end (newest)");
 draw_set_halign(fa_left);
 
-// ---------- stats ----------
 draw_set_colour(c_white);
 var status = "";
 if (quiz) {
@@ -225,7 +222,7 @@ if (quiz) {
     btn("mode",   "QUIZ MODE  [TAB]",     true);
 }
 
-// ---------- the answer box for the prediction ----------
+
 if (quiz && phase == "predict") {
     var ax = mx + 140 * ui;
     var aw = 190 * ui;
