@@ -1,7 +1,7 @@
 
 var act    = btn_click;      // set by the Draw event when a button was clicked
 btn_click  = "";
-var typing = (quiz && phase == "predict");     // the player is typing their answer
+var typing = (quiz && phase == "predict");  
 
 var k_next  = (!typing && keyboard_check_pressed(ord("N")))     || (act == "next");
 var k_back  = (!typing && keyboard_check_pressed(vk_backspace)) || (act == "back");
@@ -57,6 +57,7 @@ if (quiz) {
         var d = (dfs_len == -2) ? 99999 : dfs_visited;
         winner  = (b < d) ? "bfs" : ((d < b) ? "dfs" : "tie");
         correct = (winner == "tie" || guess == winner);
+        result_why = explain_result();   // why the winner was faster, from this round's numbers
 
         rounds++;
         if (correct) {
@@ -72,7 +73,7 @@ if (quiz) {
     }
 }
 
-
+//  SANDBOX MODE 
 if (!quiz) {
     var mcx = (mouse_x - ox) div cell;
     var mcy = mouse_y div cell;
@@ -129,6 +130,7 @@ if (k_back && (mode == "running" || mode == "done") && !(quiz && phase == "resul
 
 if (keyboard_check_pressed(vk_up))   spd = min(spd + 1, 7);
 if (keyboard_check_pressed(vk_down)) spd = max(spd - 1, 0);
+
 
 if (mode == "running") {
     if (manual) {
