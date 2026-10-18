@@ -1,4 +1,4 @@
-randomize();   
+randomize();   // without this, GameMaker gives the same "random" mazes every launch
 
 
 cols  = 20;
@@ -6,18 +6,18 @@ rows  = 15;
 total = cols * rows;
 
 
-ui      = min(room_width / 760, room_height * 0.42 / 350);   // text and panel scale
-panel_h = 350 * ui;                                          // height of the text panel
+ui      = min(room_width / 760, room_height * 0.44 / 394);   // text and panel scale
+panel_h = 394 * ui;                                          // height of the text panel
 cell    = max(8, floor(min(room_width / cols, (room_height - panel_h) / rows)));
 grid_w  = cols * cell;
 grid_h  = rows * cell;
 ox      = floor((room_width - grid_w) / 2);                  // centres the grid sideways
 
-wall       = array_create(total, false);    // true if the cell is a wall
-visited    = array_create(total, false);    // 
+wall       = array_create(total, false);
+visited    = array_create(total, false);
 discovered = array_create(total, false);
 came_from  = array_create(total, -1);
-dist       = array_create(total, 0);   // steps from the start along the search tree
+dist       = array_create(total, 0);   // BFS: which ring a cell is in. DFS: how deep the trail is.
 
 start_cell = 7 * cols + 2;
 goal_cell  = 7 * cols + 17;
@@ -34,23 +34,23 @@ visit_count = 0;
 found       = false;
 current     = -1;
 route       = [];
-narrate     = "";                 // the live commentary text
+narrate     = "";                 // the live explanation text
 manual      = true;               // true = step-by-step, false = autoplay
 undo_stack  = [];                 // saved snapshots, so BACKSPACE can go back a step
 btn_click   = "";                 // set when an on-screen button is clicked
 btn_x       = 0;
 btn_y       = 0;
 
-// ---------- speed ----------
+
 paused      = false;
 timer       = 0;
 spd         = 3;                                 // 0..7
 speed_delay = [30, 20, 12, 8, 5, 3, 1, 1];       // frames between steps
 speed_steps = [1, 1, 1, 1, 1, 1, 1, 4];          // steps per tick
 
-// ---------- stats from the last runs (-1 = not run, -2 = no path) ----------
 bfs_visited = -1;  bfs_len = -1;
 dfs_visited = -1;  dfs_len = -1;
+
 
 quiz        = true;
 phase       = "predict";   // predict, run_bfs, run_dfs, result (or sandbox)
@@ -62,6 +62,8 @@ score       = 0;
 rounds      = 0;
 streak      = 0;
 input_msg   = "";
+result_why  = "";          // the "why it was faster" explanation shown on the result screen
+
 
 reset_search = function() {
     ds_list_clear(frontier);
@@ -88,11 +90,16 @@ start_search = function(which) {
     ds_list_add(frontier, start_cell);
     mode = "running";
 
-    if (which == "bfs") narrate = "BFS starts. S goes into the queue - a QUEUE is first in, first out.\nBFS always takes from the FRONT (the oldest cell), and new cells join the BACK.\nPress N to take the first cell.";
-    else                narrate = "DFS starts. S goes onto the stack - a STACK is last in, first out.\nDFS always takes from the END (the newest cell). It checks left, down, right, up, so 'up' ends on top.\nPress N to take the first cell.";
+    if (which == "bfs") {
+        narrate = "BFS (breadth-first search) explores in RINGS: every cell 1 step from S, then every cell 2 steps away, then 3... To do that it uses a QUEUE (first in, first out): it takes the OLDEST cell from the FRONT and adds new cells to the BACK.\n"
+                + "Because closer cells are always taken before farther ones, the first time BFS reaches G it has found the shortest path.\n"
+                + "Press NEXT STEP (or N) to take the first cell.";
+    } else {
+        narrate = "DFS (depth-first search) explores by DIVING: pick a direction and keep going as deep as possible, backing up only at a dead end. To do that it uses a STACK (last in, first out): it takes the NEWEST cell from the END.\n"
+                + "It checks left, down, right, up, so 'up' ends on top and is tried first (then right, down, left).\n"
+                + "Press NEXT STEP (or N) to take the first cell.";
+    }
 }
-
-// ---------- undo: save a snapshot before every step, restore it to go back ----------
 save_state = function() {
     var s = {};
     s.visited    = array_create(total, false);
@@ -166,6 +173,7 @@ search_step = function() {
     var cur = frontier[| idx];
     ds_list_delete(frontier, idx);
 
+    var prev_cell = current;   // the cell visited on the previous step (-1 on the very first step)
     visited[cur] = true;
     current = cur;
     visit_count++;
@@ -175,8 +183,9 @@ search_step = function() {
         return;
     }
 
-    var cx = cur mod cols;
-    var cy = cur div cols;
+    var cx   = cur mod cols;
+    var cy   = cur div cols;
+    var ring = dist[cur];   // BFS: the ring this cell is in.  DFS: how deep the trail is.
     var pos_txt  = "(" + string(cx) + "," + string(cy) + ")";
     var dir_name = ["up", "right", "down", "left"];
     var checks   = "";
@@ -197,20 +206,20 @@ search_step = function() {
         var nb = ny * cols + nx;
         var nt = nm + " (" + string(nx) + "," + string(ny) + ")";
 
-        if (wall[nb])    { checks += nt + ": wall, skipped; ";            continue; }
-        if (visited[nb]) { checks += nt + ": already visited, skipped; "; continue; }
+        if (wall[nb])    { checks += nt + ": wall, blocked; ";                      continue; }
+        if (visited[nb]) { checks += nt + ": already explored, never repeat work; "; continue; }
 
         if (algo == "bfs") {
-            if (discovered[nb]) { checks += nt + ": already in the queue, skipped; "; continue; }
+            if (discovered[nb]) { checks += nt + ": already in the queue; "; continue; }
             discovered[nb] = true;
-            checks += nt + ": NEW, joins the back; ";
+            checks += nt + ": NEW, joins the back as ring " + string(ring + 1) + "; ";
         } else {
             var old = ds_list_find_index(frontier, nb);
             if (old != -1) {
                 ds_list_delete(frontier, old);
-                checks += nt + ": was waiting, MOVED to the top; ";
+                checks += nt + ": was waiting, MOVED to the top (reached from here now); ";
             } else {
-                checks += nt + ": NEW, pushed on top; ";
+                checks += nt + ": NEW, pushed on the stack; ";
             }
         }
 
@@ -223,7 +232,7 @@ search_step = function() {
     // tidy the end of the neighbour text: "...; " becomes "..."
     if (string_length(checks) > 2) checks = string_copy(checks, 1, string_length(checks) - 2) + ".";
 
-
+    
     var qs = ds_list_size(frontier);
     var nxt_txt = "";
     if (qs > 0) {
@@ -231,23 +240,60 @@ search_step = function() {
         nxt_txt = "(" + string(nn mod cols) + "," + string(nn div cols) + ")";
     }
     var cells_txt = string(qs) + ((qs == 1) ? " cell" : " cells");
+
+    // BFS: how many queued cells belong to the next ring
+    var ahead = 0;
+    for (var m = 0; m < qs; m++) {
+        if (dist[frontier[| m]] == ring + 1) ahead++;
+    }
+
     var l1, l3, l4;
 
     if (algo == "bfs") {
-        l1 = "STEP " + string(visit_count) + ": BFS takes the OLDEST cell in the queue, " + pos_txt + " (it has waited longest).";
-        l3 = (qs > 0) ? ("The queue now holds " + cells_txt + ". Next, BFS takes the FRONT one: " + nxt_txt + ".")
-                      : "The queue is now empty.";
-        l4 = (added > 0) ? "New cells join the BACK, so BFS spreads out in rings: all cells 1 step away, then 2 steps, then 3..."
-                         : "Nothing new here, so BFS simply moves on to the next cell waiting in the queue.";
+       
+        if (ring == 0) {
+            l1 = "STEP 1 - BFS RULE: explore in rings. It starts with the start cell, which is ring 0 (0 steps from S).";
+        } else {
+            l1 = "STEP " + string(visit_count) + " - BFS RULE: finish every cell 1 step from S, then every cell 2 steps away, then 3... BFS takes "
+               + pos_txt + ", which is " + string(ring) + ((ring == 1) ? " step" : " steps") + " from S (ring " + string(ring) + ").";
+            if (prev_cell != -1 && ring > dist[prev_cell]) {
+                l1 += " A NEW RING has begun: every closer cell is already explored.";
+            }
+        }
+
+        l3 = (qs > 0)
+           ? ("The queue holds " + cells_txt + ", all in ring " + string(ring) + " or " + string(ring + 1)
+              + ". New cells always join the BACK, so closer cells are always served first. Next up: " + nxt_txt + ".")
+           : "The queue is now empty.";
+
+        l4 = (added > 0)
+           ? ("Idea: BFS never skips ahead. Ring " + string(ring + 1) + " now has " + string(ahead) + ((ahead == 1) ? " cell" : " cells")
+              + " waiting, but none of them is taken until every cell in ring " + string(ring) + " is finished.")
+           : ("Idea: nothing new here, and that is fine. BFS is not stuck - it moves on to the next cell in the queue, still finishing ring "
+              + string(ring) + " first.");
     } else {
-        l1 = "STEP " + string(visit_count) + ": DFS takes the NEWEST cell on the stack, " + pos_txt + " (the one added last).";
-        l3 = (qs > 0) ? ("The stack now holds " + cells_txt + ". Next, DFS takes the one on TOP: " + nxt_txt + ".")
-                      : "The stack is now empty.";
-        l4 = (added > 0) ? "The newest cell is on top, so DFS keeps digging deeper in one direction instead of spreading out."
-                         : "DEAD END! Nothing new to add, so DFS backs up to the last cell still waiting on the stack.";
+       
+        if (prev_cell == -1) {
+            l1 = "STEP 1 - DFS RULE: go as deep as possible. It starts at the start cell.";
+        } else {
+            l1 = "STEP " + string(visit_count) + " - DFS RULE: always continue from the NEWEST cell and go as deep as possible, backing up only at a dead end. DFS takes "
+               + pos_txt + ", now " + string(ring) + ((ring == 1) ? " step" : " steps") + " deep in its trail.";
+            if (came_from[cur] != prev_cell) {
+                l1 += " BACKTRACK: the last trail ended, so DFS jumped back to the newest cell still waiting on the stack (a route it skipped earlier).";
+            }
+        }
+
+        l3 = (qs > 0)
+           ? ("The stack holds " + cells_txt + ". The TOP is the newest, so DFS continues from there: " + nxt_txt
+              + ". Cells lower down are skipped routes it only tries if this trail hits a dead end.")
+           : "The stack is now empty.";
+
+        l4 = (added > 0)
+           ? "Idea: DFS commits to one direction instead of comparing options, so it dives deeper next. That is fast if the trail heads toward G, and wasteful if it heads away."
+           : "Idea: DEAD END - nothing new from here. DFS backs up to the last route it skipped and tries that instead. All this backing up is why DFS can waste time.";
     }
 
-    narrate = l1 + "\n" + "It checks its neighbours: " + checks + "\n" + l3 + "\n" + l4;
+    narrate = l1 + "\n" + "It checks its 4 neighbours: " + checks + "\n" + l3 + "\n" + l4;
 }
 
 finish_search = function(ok) {
@@ -262,14 +308,14 @@ finish_search = function(ok) {
             p = came_from[p];
         }
         var steps = array_length(route) - 1;
-        var gtxt  = "(" + string(goal_cell mod cols) + "," + string(goal_cell div cols) + ")";
 
-        narrate = "GOAL REACHED! " + string(visit_count) + " cells were visited, and the last one was the goal " + gtxt + ".\n"
-                + "To build the path, the game follows each cell's 'came from' link back to S. That is the yellow line, " + string(steps) + " steps long.\n"
-                + ((algo == "bfs") ? "BFS explores in rings, so this path is always the SHORTEST possible."
-                                   : "DFS found A path, but not necessarily the shortest - it took the first way that worked.");
+        narrate = "GOAL REACHED after " + string(visit_count) + " cells explored. The yellow line is the path, " + string(steps)
+                + " steps long (the game follows each cell's 'came from' link back to S).\n"
+                + ((algo == "bfs")
+                   ? "BFS idea: it was working on ring " + string(steps) + " when it touched G. Every closer ring was already finished, so no shorter route can exist - that is why a BFS path is always the shortest."
+                   : "DFS idea: it stopped the moment its trail touched G. It never compared other routes, so a shorter path may exist - DFS finds A path, not necessarily the best one.");
     } else {
-        narrate = "The list is empty and the goal was never reached.\nEvery cell that could be reached has been visited, so there is NO path from S to G.";
+        narrate = "The list is empty and the goal was never reached.\nEvery cell that could be reached has been explored, so there is NO path from S to G.";
     }
 
     var len = ok ? (array_length(route) - 1) : -2;
@@ -280,6 +326,45 @@ finish_search = function(ok) {
         dfs_visited = visit_count;
         dfs_len = len;
     }
+}
+
+// Writes the "why was that method faster?" explanation, using THIS round's real numbers.
+explain_result = function() {
+    if (bfs_len < 0 || dfs_len < 0) return "G could not be reached, so neither search was faster.";
+    if (winner == "tie")            return "Both searches explored exactly the same number of cells this time.";
+
+    var shortest = bfs_len;   // BFS always finds the shortest path
+
+    // where is G compared with S?  (rows count downwards on screen)
+    var gdx = (goal_cell mod cols) - (start_cell mod cols);
+    var gdy = (goal_cell div cols) - (start_cell div cols);
+    var vtxt = (gdy < 0) ? "up" : ((gdy > 0) ? "down" : "");
+    var htxt = (gdx > 0) ? "right" : ((gdx < 0) ? "left" : "");
+    var where_txt = vtxt;
+    if (vtxt != "" && htxt != "") where_txt += " and ";
+    where_txt += htxt;
+
+    // DFS's favourite directions are up, then right. How many of them point toward G?
+    var fav = ((gdy < 0) ? 1 : 0) + ((gdx > 0) ? 1 : 0);
+
+    var s = "";
+    if (winner == "bfs") {
+        s = "WHY BFS WAS FASTER: BFS fans out in rings, so it reaches G as soon as it gets to ring " + string(shortest)
+          + " (the cells " + string(shortest) + " steps from S) - that took " + string(bfs_visited) + " cells. "
+          + "DFS does not know where G is: it dives up, then right, then down, then left, and needed " + string(dfs_visited)
+          + " cells (its path was " + string(dfs_len) + " steps against the shortest " + string(shortest) + "). ";
+        if (fav == 0) s += "G was " + where_txt + " of S, away from DFS's favourite directions, so its first dives pointed the wrong way.";
+        else          s += "G was " + where_txt + " of S, partly in DFS's favourite directions, but its dive still cost it extra cells.";
+    } else {
+        s = "WHY DFS WAS FASTER: DFS dived deep and hit G after only " + string(dfs_visited) + " cells. "
+          + "BFS must finish every ring around S first, and G was " + string(shortest)
+          + " steps away - rings get bigger the farther out you go, so that took " + string(bfs_visited) + " cells. ";
+        if (fav >= 1) s += "G was " + where_txt + " of S, matching DFS's favourite directions (up, then right). ";
+        else          s += "G was " + where_txt + " of S, against DFS's favourite directions, so this was mostly luck. ";
+        if (dfs_len > shortest) s += "DFS found G sooner, but its path (" + string(dfs_len) + " steps) is longer than the shortest (" + string(shortest) + ").";
+        else                    s += "DFS found G sooner, and its path is also the shortest (" + string(shortest) + " steps).";
+    }
+    return s;
 }
 
 stat_text = function(v) {
@@ -303,6 +388,7 @@ txt_block = function(tx, ty, s) {
     draw_text_ext_transformed(tx, ty, s, -1, (room_width - 2 * tx) / ui, ui, ui, 0);
 }
 
+// ---------- on-screen buttons ----------
 btn_begin = function(startx, starty) {
     btn_x = startx;
     btn_y = starty;
@@ -424,6 +510,7 @@ new_round = function() {
     phase           = "predict";
     keyboard_string = "";   // clear whatever the player typed last round
     input_msg       = "";
+    result_why      = "";
 }
 
 // start the first round
