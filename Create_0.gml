@@ -1,4 +1,4 @@
-randomize();   // without this, GameMaker gives the same "random" mazes every launch
+randomize();   
 
 
 cols  = 20;
