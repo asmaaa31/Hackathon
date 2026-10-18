@@ -7,6 +7,7 @@ var col_wall  = make_colour_rgb(95, 100, 118);
 var inset = max(1, floor(cell / 32));   // gap between cells
 var csc   = cell / 32;                  // scale for the S and G letters
 
+
 for (var yy = 0; yy < rows; yy++) {
     for (var xx = 0; xx < cols; xx++) {
         var i  = yy * cols + xx;
@@ -24,6 +25,7 @@ for (var yy = 0; yy < rows; yy++) {
     }
 }
 
+
 var sz  = ds_list_size(frontier);
 var fin = cell * 0.19;
 draw_set_colour(make_colour_rgb(255, 160, 40));
@@ -34,7 +36,7 @@ for (var k = 0; k < sz; k++) {
     draw_rectangle(fx + fin, fy + fin, fx + cell - fin, fy + cell - fin, false);
 }
 
-
+// final path 
 if (mode == "done" && found) {
     draw_set_colour(c_yellow);
     for (var k = 0; k < array_length(route); k++) {
@@ -49,7 +51,6 @@ if (mode == "done" && found) {
     }
 }
 
-
 if (mode == "running" && current != -1) {
     var cxp = ox + (current mod cols) * cell;
     var cyp = (current div cols) * cell;
@@ -58,7 +59,7 @@ if (mode == "running" && current != -1) {
     draw_rectangle(cxp + inset + 1, cyp + inset + 1, cxp + cell - inset - 1, cyp + cell - inset - 1, true);
 }
 
-
+// start and goal 
 var sx = ox + (start_cell mod cols) * cell;
 var sy = (start_cell div cols) * cell;
 var gx = ox + (goal_cell mod cols) * cell;
@@ -81,7 +82,7 @@ draw_set_valign(fa_top);
 var lh       = 22 * ui;                 // line height
 var mx       = 10 * ui;                 // left margin
 var pt       = grid_h + 10 * ui;        // top of the panel
-var box_y    = pt + 7 * lh + 6 * ui;    // frontier boxes / answer box
+var box_y    = pt + 9 * lh + 6 * ui;    // frontier boxes / answer box (leaves room for ~8 lines of explanation)
 var box_h    = 20 * ui;
 var box_step = 22 * ui;
 var lab_y    = box_y + box_h + 4 * ui;  // "front / end" labels
@@ -123,10 +124,8 @@ if (quiz) {
         var ans = (winner == "tie") ? "a TIE" : string_upper(winner);
         title = (correct ? "CORRECT!  " : "WRONG!  ") + "The answer was " + ans
               + "  (BFS " + string(bfs_visited) + " cells, DFS " + string(dfs_visited) + ")";
-        var why = "";
-        if (winner == "bfs") why = "BFS wins when G is close: it checks nearby cells first, so it reaches G quickly.";
-        if (winner == "dfs") why = "DFS got lucky: its deep dive ran toward G while BFS checked every closer cell first.";
-        hint = why + "\nPress NEXT ROUND (or ENTER) to play again.";
+        hcol = make_colour_rgb(225, 230, 245);
+        hint = result_why + "\n\nPress NEXT ROUND (or ENTER) to play again.";
     }
 } else {
     title = "SANDBOX: paint walls with the mouse (right-click erases, S / G move start / goal), then run BFS or DFS";
@@ -134,7 +133,7 @@ if (quiz) {
     if (algo == "dfs") title = "DFS = STACK: always take the NEWEST discovered cell (end of the list)";
 }
 
-// detailed live commentary while a search is running
+// detailed live explanation while a search is running
 if (mode != "idle" && (!quiz || phase == "run_bfs" || phase == "run_dfs")) {
     hint = narrate;
     hcol = make_colour_rgb(255, 230, 120);
@@ -175,6 +174,7 @@ draw_set_colour(next_end ? c_white : c_gray);
 txt(room_width - mx, lab_y, next_end ? "NEXT ->  end (newest)" : "end (newest)");
 draw_set_halign(fa_left);
 
+
 draw_set_colour(c_white);
 var status = "";
 if (quiz) {
@@ -193,7 +193,7 @@ draw_set_colour(c_gray);
 txt(mx, last_y, "Last BFS -> visited " + stat_text(bfs_visited) + ", path " + stat_text(bfs_len)
               + "      Last DFS -> visited " + stat_text(dfs_visited) + ", path " + stat_text(dfs_len));
 
-// ---------- buttons (click them or use the key shown on each) ----------
+
 btn_begin(mx, ctl_y);
 
 var can_back = (array_length(undo_stack) > 0) && (mode == "running" || mode == "done") && !(quiz && phase == "result");
@@ -221,7 +221,6 @@ if (quiz) {
     btn("random", "RANDOM WALLS  [M]",    true);
     btn("mode",   "QUIZ MODE  [TAB]",     true);
 }
-
 
 if (quiz && phase == "predict") {
     var ax = mx + 140 * ui;
